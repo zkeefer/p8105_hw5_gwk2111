@@ -1,0 +1,42 @@
+---
+title: "p8105_hw5_gwk2111"
+author: "Zach Keefer"
+date: "11/7/2018"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(dplyr)
+```
+
+##Problem 1
+
+```{r}
+files = list.files(path = "data", full.names = TRUE) %>% 
+  set_names(basename(.))
+
+study_df = map_df(files, read.csv, .id = "file") %>% 
+  janitor::clean_names() %>% 
+  separate(file, into = c("control_arm", "subject_id"), sep = "_") %>% 
+  mutate(subject_id = str_sub(subject_id, start = 1, end = 2)) %>% 
+  gather(key = week, value = obs, week_1:week_8) %>% 
+  mutate(week = str_sub(week, start = 6, end = 6),
+         week = as.numeric(week))
+  
+```
+
+```{r}
+ggplot(study_df, aes(x = week, y = obs, color = subject_id)) +
+  geom_line() +
+  facet_grid(~control_arm)
+```
+
+##Problem 2
+
+```{r}
+
+```
+
