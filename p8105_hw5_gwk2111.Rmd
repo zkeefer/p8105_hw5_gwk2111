@@ -54,11 +54,11 @@ There is a clear difference between the two groups over time.  While the control
 homicide_df = read.csv("https://raw.githubusercontent.com/washingtonpost/data-homicides/master/homicide-data.csv") %>% 
   janitor::clean_names() %>% 
   mutate(city_state = str_c(city, state, sep = ", ")) %>% 
-  #I decided to eliminate Tulsa, AL because it was a misentered data point
+  #I decided to eliminate Tulsa, AL because it was a wrongly entered data point
   filter(city_state != "Tulsa, AL")
 ```
 
-The following data set is from the Washington Post.  It is data on homicides in 50 large U.S. cities.  Before adding the city_state variable and eliminating Tulsa, AL, the data set contained 52,179 obvservations and 12 variables.   Each observation has a unique id, and describes the name, race, and sex of the victim, as well as the report date of the homicide, the location of the homicide and the status of the investigation.  The variables of interest in the data set are `city` and `state`, which are combined above to create the `city_state` variable, and the `disposition` variable which describes the status of the investigation into a homicide.
+The following data set is from the Washington Post.  It is data on homicides in 50 large U.S. cities.  Before adding the city_state variable and eliminating Tulsa, AL, the data set contained 52,179 obvservations and 12 variables.   Each observation has a unique id, and describes the name, race, and sex of the victim, as well as the report date of the homicide, the location of the homicide and the status of the investigation.  The variables of interest in the data set are `city` and `state`, which are combined above to create the `city_state` variable, and the `disposition` variable which describes the status of the investigation of each homicide.
 
 
 Summarize within cities to obtain the total number of homicides and the number of unsolved homicides:
