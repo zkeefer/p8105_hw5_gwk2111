@@ -14,13 +14,18 @@ library(dplyr)
 
 ##Problem 1
 
+Create a tidy dataframe containing data from all participants, including the subject ID, arm, and observations over time:
+
 ```{r}
 study_df = 
+  ##Creating a data frame of the file names
   tibble(files = list.files(path = "./data", full.names = TRUE)) %>% 
   mutate(data = map(files, read.csv)) %>% 
   unnest() %>% 
   janitor::clean_names() %>% 
+  ##Cleaning the names of each participant
   mutate(files = str_sub(files, start = 8, end = 13)) %>% 
+  ##Separating the arms of the study and the id of each subject
   separate(files, into = c("control_arm", "subject_id"), sep = "_") %>% 
   gather(key = week, value = obs, week_1:week_8) %>% 
   mutate(week = str_sub(week, start = 6, end = 6),
@@ -28,11 +33,20 @@ study_df =
   
 ```
 
+Make a spaghetti plot showing observations on each subject over time:
+
 ```{r}
 ggplot(study_df, aes(x = week, y = obs, color = subject_id)) +
   geom_line() +
-  facet_grid(~control_arm)
+  ##Facetting the plot by controls and experiments to better visualize differences between the two groups.
+  facet_grid(~control_arm) +
+  labs(y = "Observation",
+       x = "Week",
+       color = "Subject ID")
 ```
+
+There is a clear difference between the two groups over time.  While the control group stays fairly level in their observation level, the experiment group increases over time. 
+
 
 ##Problem 2
 
@@ -40,8 +54,14 @@ ggplot(study_df, aes(x = week, y = obs, color = subject_id)) +
 homicide_df = read.csv("https://raw.githubusercontent.com/washingtonpost/data-homicides/master/homicide-data.csv") %>% 
   janitor::clean_names() %>% 
   mutate(city_state = str_c(city, state, sep = ", ")) %>% 
+  #I decided to eliminate Tulsa, AL because it was a misentered data point
   filter(city_state != "Tulsa, AL")
 ```
+
+The following data set is from the Washington Post.  It is data on homicides in 50 large U.S. cities.  Before adding the city_state variable and eliminating Tulsa, AL, the data set contained 52,179 obvservations and 12 variables.   Each observation has a unique id, and describes the name, race, and sex of the victim, as well as the report date of the homicide, the location of the homicide and the status of the investigation.  The variables of interest in the data set are `city` and `state`, which are combined above to create the `city_state` variable, and the `disposition` variable which describes the status of the investigation into a homicide.
+
+
+Summarize within cities to obtain the total number of homicides and the number of unsolved homicides:
 
 ```{r}
 homicides = group_by(homicide_df, city_state) %>% 
@@ -51,7 +71,22 @@ homicides = group_by(homicide_df, city_state) %>%
   knitr::kable(homicides)
 ```
 
+Estimate proportion of homicides unsolved in Baltimore, pull proportions and CI's:
+
 ```{r}
+balt_homicides = filter(homicides, city_state == "Baltimore, MD") 
+##This creates the R object
+balt_prop = prop.test(balt_homicides$n_unsolved, balt_homicides$n_homicide)
+##Tidying and selecting output
+broom::tidy(balt_prop) %>% 
+  select(estimate, conf.low, conf.high)
+  
+```
+
+Estimate proportion of homicides for each city, create a tidy data frame with estimated proportions and CIs for each city:
+
+```{r}
+##Creating a function to use below in order to run prop.test for each city in the data frame
 prop_function = function(df) {
   prop_estimate = prop.test(df$n_unsolved, df$n_homicide)
   
@@ -60,23 +95,24 @@ prop_function = function(df) {
 }
 ```
 
-```{r}
-filter(homicides, city_state == "Baltimore, MD") %>% 
-  prop_function()
-```
-
-
-
 
 ```{r}
+##Running prop.test using the function created above
 us_prop_df = nest(homicides, n_homicide, n_unsolved) %>%
   mutate(us_prop = map(data, prop_function)) %>% 
   unnest()
 ```
 
+Create a plot that shows the estimates and CIs for each city:
+
 ```{r}
-ggplot(us_prop_df, aes(x = city_state, y = estimate)) +
+us_prop_df %>% 
+  mutate(city_state = forcats::fct_reorder(city_state, estimate)) %>% 
+  ggplot(aes(x = city_state, y = estimate)) +
   geom_point() +
-  geom_errorbar(aes(ymin = conf.low, ymax = conf.high))
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high)) +
+  theme(axis.text.x = element_text(angle = 68, hjust = 1)) +
+  labs(x = "City",
+       y = "Proportion of Unsolved Homicides")
 ```
 
