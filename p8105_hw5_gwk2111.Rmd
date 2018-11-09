@@ -15,13 +15,13 @@ library(dplyr)
 ##Problem 1
 
 ```{r}
-files = list.files(path = "data", full.names = TRUE) %>% 
-  set_names(basename(.))
-
-study_df = map_df(files, read.csv, .id = "file") %>% 
+study_df = 
+  tibble(files = list.files(path = "./data", full.names = TRUE)) %>% 
+  mutate(data = map(files, read.csv)) %>% 
+  unnest() %>% 
   janitor::clean_names() %>% 
-  separate(file, into = c("control_arm", "subject_id"), sep = "_") %>% 
-  mutate(subject_id = str_sub(subject_id, start = 1, end = 2)) %>% 
+  mutate(files = str_sub(files, start = 8, end = 13)) %>% 
+  separate(files, into = c("control_arm", "subject_id"), sep = "_") %>% 
   gather(key = week, value = obs, week_1:week_8) %>% 
   mutate(week = str_sub(week, start = 6, end = 6),
          week = as.numeric(week))
@@ -37,6 +37,46 @@ ggplot(study_df, aes(x = week, y = obs, color = subject_id)) +
 ##Problem 2
 
 ```{r}
+homicide_df = read.csv("https://raw.githubusercontent.com/washingtonpost/data-homicides/master/homicide-data.csv") %>% 
+  janitor::clean_names() %>% 
+  mutate(city_state = str_c(city, state, sep = ", ")) %>% 
+  filter(city_state != "Tulsa, AL")
+```
 
+```{r}
+homicides = group_by(homicide_df, city_state) %>% 
+  summarize(n_homicide = n(),
+            n_unsolved = sum(disposition == "Closed without arrest" | disposition == "Open/No arrest")) 
+  
+  knitr::kable(homicides)
+```
+
+```{r}
+prop_function = function(df) {
+  prop_estimate = prop.test(df$n_unsolved, df$n_homicide)
+  
+  broom::tidy(prop_estimate) %>% 
+    select(estimate, conf.low, conf.high)
+}
+```
+
+```{r}
+filter(homicides, city_state == "Baltimore, MD") %>% 
+  prop_function()
+```
+
+
+
+
+```{r}
+us_prop_df = nest(homicides, n_homicide, n_unsolved) %>%
+  mutate(us_prop = map(data, prop_function)) %>% 
+  unnest()
+```
+
+```{r}
+ggplot(us_prop_df, aes(x = city_state, y = estimate)) +
+  geom_point() +
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high))
 ```
 
